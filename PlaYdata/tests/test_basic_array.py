@@ -25,6 +25,7 @@ test_text_df["idx"] = map(lambda xx :u"%05d" % xx,test_text_df["index"])
 
 import PlaYdata.util.array_tools as tools
 from PlaYdata.core.basic_arrays import ValuesArray
+from PlaYdata.core.basic_arrays_merger import StatesDictionaryMerger
 import numpy as np
 
 
@@ -42,6 +43,26 @@ def test_StatesDictionary__referred_by():
     assert states_data_array in states_data_array._states_dict._referred_by
 
 
+def test_StatesDictionaryMerger():
+    val_array1 = ValuesArray(list(tools.ngram(test_text_df["text"].values[0],[1])))
+    val_array2 = ValuesArray(list(tools.ngram(test_text_df["text"].values[1],[1])))
+    val_array3 = ValuesArray(list(tools.ngram(test_text_df["text"].values[2],[1])))
+    val_array4 = ValuesArray(list(tools.ngram(test_text_df["text"].values[5],[1])))
+    states_data_array1 = val_array1.to_states_data_array()
+    states_data_array2 = val_array2.to_states_data_array()
+    states_data_array3 = val_array3.to_states_data_array()
+    states_data_array4 = val_array4.to_states_data_array()
+
+    states_merger = StatesDictionaryMerger(states_data_array1._states_dict,
+                                           states_data_array2._states_dict,
+                                           states_data_array3._states_dict,
+                                           states_data_array4._states_dict)
+    
+    states_merger.merge().update()
+    
+    assert states_data_array1._states_dict == states_data_array2._states_dict
+    assert states_data_array3._states_dict == states_data_array2._states_dict
+    assert states_data_array3._states_dict == states_data_array4._states_dict    
 
 
 
