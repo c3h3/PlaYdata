@@ -29,40 +29,40 @@ from PlaYdata.core.basic_arrays_merger import StatesDictionaryMerger
 import numpy as np
 
 
-def test_ValuesArray_decompose_into_states_ptrs():
-    val_array = ValuesArray(list(tools.ngram(test_text_df["text"].values[0],[1])))
-    states_array, ptr_array = val_array.decompose_into_states_ptrs()
-    
-    assert type(val_array) == type(states_array._eval(ptr_array))
-    assert np.array_equal(val_array, states_array._eval(ptr_array))
-    
-    
-def test_StatesDictionary__referred_by():
-    val_array = ValuesArray(list(tools.ngram(test_text_df["text"].values[0],[1])))
-    states_data_array = val_array.to_states_data_array()
-    assert states_data_array in states_data_array._states_dict._referred_by
-
-
-def test_StatesDictionaryMerger():
-    val_array1 = ValuesArray(list(tools.ngram(test_text_df["text"].values[0],[1])))
-    val_array2 = ValuesArray(list(tools.ngram(test_text_df["text"].values[1],[1])))
-    val_array3 = ValuesArray(list(tools.ngram(test_text_df["text"].values[2],[1])))
-    val_array4 = ValuesArray(list(tools.ngram(test_text_df["text"].values[5],[1])))
-    states_data_array1 = val_array1.to_states_data_array()
-    states_data_array2 = val_array2.to_states_data_array()
-    states_data_array3 = val_array3.to_states_data_array()
-    states_data_array4 = val_array4.to_states_data_array()
-
-    states_merger = StatesDictionaryMerger(states_data_array1._states_dict,
-                                           states_data_array2._states_dict,
-                                           states_data_array3._states_dict,
-                                           states_data_array4._states_dict)
-    
-    states_merger.merge().update()
-    
-    assert states_data_array1._states_dict == states_data_array2._states_dict
-    assert states_data_array3._states_dict == states_data_array2._states_dict
-    assert states_data_array3._states_dict == states_data_array4._states_dict    
+#def test_ValuesArray_decompose_into_states_ptrs():
+#    val_array = ValuesArray(list(tools.ngram(test_text_df["text"].values[0],[1])))
+#    states_array, ptr_array = val_array.decompose_into_states_ptrs()
+#    
+#    assert type(val_array) == type(states_array._eval(ptr_array))
+#    assert np.array_equal(val_array, states_array._eval(ptr_array))
+#    
+#    
+#def test_StatesDictionary__referred_by():
+#    val_array = ValuesArray(list(tools.ngram(test_text_df["text"].values[0],[1])))
+#    states_data_array = val_array.to_states_data_array()
+#    assert states_data_array in states_data_array._states_dict._referred_by
+#
+#
+#def test_StatesDictionaryMerger():
+#    val_array1 = ValuesArray(list(tools.ngram(test_text_df["text"].values[0],[1])))
+#    val_array2 = ValuesArray(list(tools.ngram(test_text_df["text"].values[1],[1])))
+#    val_array3 = ValuesArray(list(tools.ngram(test_text_df["text"].values[2],[1])))
+#    val_array4 = ValuesArray(list(tools.ngram(test_text_df["text"].values[5],[1])))
+#    states_data_array1 = val_array1.to_states_data_array()
+#    states_data_array2 = val_array2.to_states_data_array()
+#    states_data_array3 = val_array3.to_states_data_array()
+#    states_data_array4 = val_array4.to_states_data_array()
+#
+#    states_merger = StatesDictionaryMerger(states_data_array1._states_dict,
+#                                           states_data_array2._states_dict,
+#                                           states_data_array3._states_dict,
+#                                           states_data_array4._states_dict)
+#    
+#    states_merger.merge().update()
+#    
+#    assert states_data_array1._states_dict == states_data_array2._states_dict
+#    assert states_data_array3._states_dict == states_data_array2._states_dict
+#    assert states_data_array3._states_dict == states_data_array4._states_dict    
 
 
 
