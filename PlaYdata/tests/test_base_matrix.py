@@ -59,7 +59,8 @@ def test_Matrix_build_row_struct_index():
     val_mat2_text = list(tools.ngram(test_text_df["text"].values[1], [1]))
     val_mat1 = ValuesMatrix(val_mat1_text, force2d="as_col")
     val_mat2 = ValuesMatrix(val_mat2_text, force2d="as_col")
-    val_mat = ValuesMatrix(np.concatenate((val_mat1._1d_ngram(2), val_mat2._1d_ngram(2)), axis=0))
+    val_mat = ValuesMatrix(np.concatenate((val_mat1._1d_ngram(2),
+                                           val_mat2._1d_ngram(2)), axis=0))
     states_matrix, idx_matrix = val_mat.build_row_struct_index()
     assert np.array_equal(states_matrix._eval(idx_matrix), val_mat)
 
@@ -76,8 +77,6 @@ def test_Matrix_build_index():
     ss, ii = idx_matrix.build_row_struct_index()
     assert np.array_equal(ss._eval(ii), idx_matrix)
     assert np.array_equal(states_matrix._eval(ss._eval(ii)), val_mat)
-
-
 
 
 if __name__ == '__main__':
