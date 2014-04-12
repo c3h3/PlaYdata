@@ -41,6 +41,9 @@ def test_StatesMatrixMerger():
     idx_data_mat1_old_ref_data = idx_data_mat1.states_matrix._ref_data
     idx_data_mat2_old_ref_data = idx_data_mat2.states_matrix._ref_data
 
+    old_idx_data_mat1 = idx_data_mat1.index_matrix.copy()
+    old_idx_data_mat2 = idx_data_mat2.index_matrix.copy()
+
     assert len(idx_data_mat1_old_ref_data) > 0
     assert len(idx_data_mat2_old_ref_data) > 0
 
@@ -56,6 +59,11 @@ def test_StatesMatrixMerger():
     assert id(idx_data_mat1.states_matrix) == id(idx_data_mat2.states_matrix)
     assert len(idx_data_mat2.states_matrix._ref_data) > 1
 
+    assert np.array_equal(idx_data_mat1.index_matrix, old_idx_data_mat1)
+    assert not np.array_equal(idx_data_mat2.index_matrix, old_idx_data_mat2)
+
+    assert np.array_equal(idx_data_mat1._data, val_mat1)
+    assert np.array_equal(idx_data_mat2._data, val_mat2)
 
 if __name__ == '__main__':
     pass

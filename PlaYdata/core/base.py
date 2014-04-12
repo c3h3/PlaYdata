@@ -5,9 +5,9 @@ Created on Apr 7, 2014
 '''
 
 import numpy as np
-import PlaYdata.util.np_tools as np_tools
-import PlaYdata.util.tools as tools
 from PlaYdata.util.args_tools import check_type_of_args
+import PlaYdata.util.array_tools as tools
+import PlaYdata.util.np_tools as np_tools
 
 
 class Vector(np.ndarray):
@@ -17,14 +17,15 @@ class Vector(np.ndarray):
         pass
 
     @classmethod
-    def _preprocess_before_init_return(cls, vector , *args, **kwargs):
+    def _preprocess_before_init_return(cls, vector, *args, **kwargs):
         pass
 
     def __new__(cls, data, dtype=None, *args, **kwargs):
 
         if isinstance(data, cls):
             values_vector = data
-            cls._preprocess_if_data_is_cls(vector=values_vector, *args, **kwargs)
+            cls._preprocess_if_data_is_cls(vector=values_vector,
+                                           *args, **kwargs)
             return values_vector
 
         else:
@@ -36,7 +37,8 @@ class Vector(np.ndarray):
             assert len(vector_data.shape) == 1
 
             vector_data = vector_data.view(cls)
-            cls._preprocess_before_init_return(vector=vector_data, *args, **kwargs)
+            cls._preprocess_before_init_return(vector=vector_data,
+                                               *args, **kwargs)
 
             return vector_data
 
@@ -76,7 +78,15 @@ class Matrix(np.ndarray):
             return matrix_data
         else:
 
-            matrix_data = np.array(data, dtype=dtype)
+            if isinstance(data, (unicode, str)):
+                # in case of matrix_data = np.array(unicode-type instance)
+                # the shape of matrix_data would be () and len(matrix_data.shape) == 0
+                matrix_data = np.array([data], dtype=dtype)
+            else:
+                matrix_data = np.array(data, dtype=dtype)
+
+            if len(matrix_data.shape) > 2:
+                matrix_data = np_tools.clean_no_data_tensors(matrix_data)
 
             if force2d == "as_row":
                 if len(matrix_data.shape) < 2:
@@ -84,9 +94,6 @@ class Matrix(np.ndarray):
             elif force2d == "as_col":
                 if len(matrix_data.shape) < 2:
                     matrix_data = np.array([matrix_data]).T
-
-            if len(matrix_data.shape) > 2:
-                matrix_data = np_tools.clean_no_data_tensors(matrix_data)
 
             assert len(matrix_data.shape) == 2
 
@@ -134,11 +141,12 @@ class Matrix(np.ndarray):
     def _1d_ngram(self, n):
         assert self._is_1d
         ngram_results = list(tools.ngram(self.flatten(), n))
-        return type(self)(data=ngram_results)
+        return type(self)(data=ngram_results, **self._reconstruct_kwargs)
 
     def build_values_index(self):
         u, inv = np.unique(self, return_inverse=True)
         states_matrix = StatesMatrix(data=u, eval_cls=type(self))
+
         assert states_matrix._is_1d
         idx_matrix = IndexMatrix(data=inv).reshape(self.shape)
         return states_matrix, idx_matrix
@@ -179,9 +187,7 @@ class IndexTransformVector(Vector):
         return self.transform(trans_matrix=trans_matrix, force2d=force2d)
 
     def transform(self, trans_matrix, force2d="as_row"):
-        _states_matrix_checker = isinstance(trans_matrix, StatesMatrix) and \
-                                    (trans_matrix._eval_cls == IndexMatrix)
-
+        _states_matrix_checker = isinstance(trans_matrix, StatesMatrix) and (trans_matrix._eval_cls == IndexMatrix)
         _index_matrix_checker = isinstance(trans_matrix, IndexMatrix)
 
         assert _states_matrix_checker or _index_matrix_checker
@@ -277,12 +283,16 @@ class StatesMatrix(Matrix):
         while len(self._ref_data) > 0:
             yield self._ref_data.pop()
 
-    def clean_all_ref_data(self):
+    def pop_out_clean_all_ref_data(self):
+        return [xx for xx in self.pop_out_ref_data()]
+
+    def create_new_ref_data_list(self):
         new_ref_data = list()
         self._ref_data = new_ref_data
 
     def update_all_ref_data(self, new_states_matrix, idx_trans_vec=None,
                             force2d="as_row"):
+
         for one_ref_data in self.pop_out_ref_data():
             one_ref_data.update_states_matrix(new_states_matrix=new_states_matrix,
                                               idx_trans_vec=idx_trans_vec,
@@ -294,6 +304,14 @@ class IndexedDataMatrix(object):
         self.states_matrix = states_matrix
         self.index_matrix = index_matrix
         self.states_matrix.add_ref_data(self)
+
+    @property
+    def _nrow(self):
+        return self.index_matrix._nrow
+
+    @property
+    def _ncol(self):
+        return self.index_matrix._ncol
 
     @property
     def _data(self):
@@ -314,78 +332,56 @@ class IndexedDataMatrix(object):
     def transform_index_matrix(self, idx_trans_vec, force2d="as_row"):
         self.index_matrix = idx_trans_vec(self.index_matrix, force2d=force2d)
 
+    def _1d_ngram(self, n):
+        self.index_matrix = self.index_matrix._1d_ngram(n)
+        return self
 
-class StatesMatrixMerger(list):
-    def __init__(self, *states_mats):
+    def update_index_matrix(self, new_index_matrix):
+        # [BUG] self.states_matrix.remove_ref_data(self.index_matrix)
+        # [BUG] self.states_matrix.add_ref_data(new_index_matrix)
+        self.index_matrix = new_index_matrix
 
-        # checking states_mats are all StatesDictionary's instance
-        assert check_type_of_args(StatesMatrix, *states_mats)
+    def tile(self, reps=(1, 1), update=True):
+        new_index_matrix = np.tile(self.index_matrix, reps)
 
-        # checking states_mats have the same _is_row_struct
-        assert len(np.unique(np.array(map(lambda xx:xx._is_row_struct, states_mats)))) == 1
-        self._is_row_struct = states_mats[0]._is_row_struct
+        if update:
+            self.update_index_matrix(new_index_matrix=new_index_matrix)
+            return self
+        else:
+            return type(self)(states_matrix=self.states_matrix,
+                              index_matrix=new_index_matrix)
 
-        # checking states_mats have the same dtype.type
-        assert len(np.unique(np.array(map(lambda xx:xx.dtype.type, states_mats)))) == 1
-        self._dtype_type = states_mats[0].dtype.type
+    def extend_rows(self, n, update=True):
+        return self.tile(reps=(n, 1), update=update)
 
-        # checking states_mats have the same _eval_cls
-        assert len(np.unique(np.array(map(lambda xx:xx._eval_cls, states_mats)))) == 1
-        self._eval_cls = states_mats[0]._eval_cls
+    def extend_cols(self, n, update=True):
+        return self.tile(reps=(1, n), update=update)
 
-        self._is_already_merged = False
-        self._is_already_updated = False
 
-        list.__init__(self, states_mats)
+class MultiIndexedDataMatrix(np.ndarray):
+    def __new__(cls, indexed_data_matrixes):
+
+        # checking states_data_arrays are all StatesDataArray's instance
+        assert check_type_of_args(IndexedDataMatrix, *indexed_data_matrixes)
+
+        # checking indexed_data_matrixes have the same _nrow
+        assert len(np.unique(np.array(map(lambda xx: xx._nrow,
+                                          indexed_data_matrixes)))) == 1
+
+        return np.array(indexed_data_matrixes).view(cls)
 
     @property
-    def _unique_states_matrix_ids(self):
-        return np.unique(np.array(map(id, self)))
+    def _ncols(self):
+        return map(lambda xx: xx._ncol, self)
 
-    def merge(self):
-        if not self._is_already_merged:
-            if len(self._unique_states_matrix_ids) > 1:
+    @property
+    def _nrows(self):
+        return map(lambda xx: xx._nrow, self)
 
-                if not self._is_row_struct:
-                    convert_to_1d_arrays = map(lambda xx: xx._as_1d_array, self)
-                    len_of_1d_arrays = map(len, convert_to_1d_arrays)
-
-                    sector_positions = np.cumsum([0] + len_of_1d_arrays)
-                    sector_positions_slices = map(lambda xx: slice(*xx),
-                                                  list(tools.ngram(sector_positions, 2)))
-
-                    join_all_states_arrays = np.concatenate(tuple(convert_to_1d_arrays), axis=0)
-
-                    u, i = np.unique(join_all_states_arrays,
-                                     return_inverse=True)
-
-                    self._idx_trans_vectors = map(lambda xx: IndexTransformVector(i[xx]),
-                                                  sector_positions_slices)
-
-                    self._new_states_matrix = StatesMatrix(data=u,
-                                                           eval_cls=self._eval_cls)
-
-                # TODO: self._is_row_struct == True
-                else:
-                    self._is_already_merged = True
-                    self._is_already_updated = True
-                    pass
-
-            else:
-                # Case of len(self._unique_states_matrix_ids) <= 1,
-                # it means states_mats has only one kind of states matrix
-                # in this case, we don't need to do anything about merge or update
-                self._is_already_merged = True
-                self._is_already_updated = True
-
-    def update(self):
-        if not self._is_already_merged:
-            self.merge()
-
-        if not self._is_already_updated:
-            for states_mat, idx_trans_vec in zip(self, self._idx_trans_vectors):
-                states_mat.update_all_ref_data(new_states_matrix=self._new_states_matrix,
-                                               idx_trans_vec=idx_trans_vec)
+    @property
+    def _nrow(self):
+        assert len(np.unique(self._nrows)) == 1
+        return self._nrows[0]
 
 
 if __name__ == '__main__':
