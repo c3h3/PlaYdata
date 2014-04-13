@@ -383,6 +383,15 @@ class MultiIndexedDataMatrix(np.ndarray):
         assert len(np.unique(self._nrows)) == 1
         return self._nrows[0]
 
+    @property
+    def states_matrixes(self):
+        return map(lambda xx: xx.states_matrix, self)
+
+    @property
+    def index_matrixes(self):
+        return map(lambda xx: xx.index_matrix, self)
+
+
 
 if __name__ == '__main__':
     pass
