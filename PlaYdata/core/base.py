@@ -8,6 +8,7 @@ import numpy as np
 from PlaYdata.util.args_tools import check_type_of_args
 import PlaYdata.util.array_tools as tools
 import PlaYdata.util.np_tools as np_tools
+from PlaYdata.old.base_matrix import StatesMatrix
 
 
 class Vector(np.ndarray):
@@ -138,6 +139,11 @@ class Matrix(np.ndarray):
         tr_array = np.array(self)
         return type(self)(data=tr_array.T, **self._reconstruct_kwargs)
 
+    @property
+    def _new(self):
+        new_array = np.array(self)
+        return type(self)(data=new_array, **self._reconstruct_kwargs)
+
     def _1d_ngram(self, n):
         assert self._is_1d
         ngram_results = list(tools.ngram(self.flatten(), n))
@@ -248,8 +254,22 @@ class StatesMatrix(Matrix):
         return _reconstr_kwargs
 
     @property
+    def _reconstruct_kwargs_without_ref_data(self):
+        _reconstr_kwargs = {}
+
+        _reconstr_kwargs["eval_cls"] = self._eval_cls
+        _reconstr_kwargs["is_row_struct"] = self._is_row_struct
+
+        return _reconstr_kwargs
+
+    @property
     def _has_ref_data(self):
         return len(self._ref_data) > 0
+
+    @property
+    def _new_without_ref_data(self):
+        new_array = np.array(self)
+        return type(self)(data=new_array, **self._reconstruct_kwargs_without_ref_data)
 
     def _eval_values_type(self, idx_mat):
         return self._as_1d_array[idx_mat].view(self._eval_cls).copy()
@@ -259,7 +279,10 @@ class StatesMatrix(Matrix):
 
     def _eval(self, idx_mat):
 
-        assert isinstance(idx_mat, IndexMatrix)
+        assert isinstance(idx_mat, (IndexMatrix, StatesMatrix))
+        if isinstance(idx_mat, StatesMatrix):
+            assert idx_mat._is_row_struct
+
         _row_struct_type_checkers = (idx_mat._is_1d and self._is_row_struct)
         _values_type_checkers = self._is_1d
         assert _values_type_checkers or _row_struct_type_checkers
@@ -304,6 +327,16 @@ class IndexedDataMatrix(object):
         self.states_matrix = states_matrix
         self.index_matrix = index_matrix
         self.states_matrix.add_ref_data(self)
+
+    @property
+    def _new(self):
+        return type(self)(states_matrix=self.states_matrix._new_without_ref_data,
+                          index_matrix=self.index_matrix._new)
+
+    @property
+    def _new_without_ref_data(self):
+        return type(self)(states_matrix=self.states_matrix._new,
+                          index_matrix=self.index_matrix._new)
 
     @property
     def _nrow(self):

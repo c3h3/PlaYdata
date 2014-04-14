@@ -7,8 +7,8 @@ Created on Apr 12, 2014
 import numpy as np
 from PlaYdata.util.args_tools import check_type_of_args, check_args
 import PlaYdata.util.array_tools as tools
-from PlaYdata.core.base_matrix import StatesMatrix, IndexTransformVector
-from PlaYdata.core.base_matrix import IndexedDataMatrix, MultiIndexedDataMatrix
+from PlaYdata.core.base import StatesMatrix, IndexTransformVector
+from PlaYdata.core.base import IndexedDataMatrix, MultiIndexedDataMatrix
 
 
 class StatesMatrixMerger(list):
@@ -51,7 +51,6 @@ class StatesMatrixMerger(list):
 
         else:
             return self._idx_trans_vectors
-
 
     @property
     def merged_states_matrix(self):
@@ -133,6 +132,7 @@ class IndexedDataMatrixMerger(list):
     @property
     def _index_matrixes_ncols(self):
         return map(lambda xx: xx.index_matrix._ncol, self)
+
     @property
     def _index_matrixes_nrows(self):
         return map(lambda xx: xx.index_matrix._nrow, self)
