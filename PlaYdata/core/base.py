@@ -425,6 +425,5 @@ class MultiIndexedDataMatrix(np.ndarray):
         return map(lambda xx: xx.index_matrix, self)
 
 
-
 if __name__ == '__main__':
     pass
